@@ -735,6 +735,64 @@ footer{color:var(--muted)!important;border-color:var(--line)!important}
 </script>
 </head>
 <body>
+<style>
+  #pageLoader{
+    position:fixed; inset:0; z-index:99999;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    background:radial-gradient(120% 120% at 50% 0%, #2a2620 0%, #16130f 55%, #0c0a08 100%);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  #pageLoader.hide{ opacity:0; transform:scale(1.06); pointer-events:none; }
+  #pageLoader .plMark{
+    width:76px; height:76px; border-radius:20px;
+    background:linear-gradient(135deg,#F3E4C0,#C9A86A);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-weight:800; font-size:26px; letter-spacing:0.5px; color:#171717;
+    animation: plPop 0.75s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  #pageLoader .plName{
+    margin-top:18px; font-family:'Fraunces', serif; color:#F7F5EF; font-size:15px; letter-spacing:2px;
+    text-transform:uppercase; opacity:0;
+    animation: plFadeUp 0.6s ease .35s both;
+  }
+  #pageLoader .plBar{
+    width:120px; height:2px; margin-top:16px; border-radius:2px;
+    background:rgba(255,255,255,0.12); overflow:hidden; opacity:0;
+    animation: plFadeUp 0.6s ease .5s both;
+  }
+  #pageLoader .plBar span{
+    display:block; height:100%; width:40%; border-radius:2px;
+    background:linear-gradient(90deg,#F3E4C0,#C9A86A);
+    animation: plSlide 1.1s cubic-bezier(.45,0,.2,1) .5s infinite;
+  }
+  @keyframes plPop{
+    0%{ transform:scale(0.3) rotate(-8deg); opacity:0; }
+    60%{ transform:scale(1.12) rotate(2deg); opacity:1; }
+    100%{ transform:scale(1) rotate(0deg); opacity:1; }
+  }
+  @keyframes plFadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes plSlide{
+    0%{ transform:translateX(-100%); }
+    50%{ transform:translateX(150%); }
+    100%{ transform:translateX(150%); }
+  }
+</style>
+<div id="pageLoader">
+  <div class="plMark">SB</div>
+  <div class="plName">Shyamu Baghel</div>
+  <div class="plBar"><span></span></div>
+</div>
+<script>
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      const pl = document.getElementById('pageLoader');
+      if(!pl) return;
+      pl.classList.add('hide');
+      setTimeout(()=> pl.remove(), 650);
+    }, 900);
+  });
+</script>
+
 <div class="ambientGlow" aria-hidden="true"><span></span><span></span></div>
 <div class="cursorGlow" id="cursorGlow" aria-hidden="true"></div>
 
