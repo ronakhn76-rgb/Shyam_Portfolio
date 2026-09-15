@@ -727,6 +727,12 @@ footer{color:var(--muted)!important;border-color:var(--line)!important}
 .card,.cardImg{z-index:auto;}
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 </head>
 <body>
 <div class="ambientGlow" aria-hidden="true"><span></span><span></span></div>
@@ -1237,18 +1243,46 @@ function renderLbItem(it){
     wrap.style.height = '82vh';
     wrap.style.background = '#fff';
     wrap.style.borderRadius = '10px';
-    wrap.style.overflow = 'hidden';
+    wrap.style.overflow = 'auto';
     wrap.style.boxShadow = '0 40px 80px rgba(0,0,0,0.6)';
-    const frame = document.createElement('iframe');
-    // toolbar=0/navpanes=0 hides the browser's built-in PDF toolbar (incl. its download button)
-    frame.src = it.file + '#toolbar=0&navpanes=0&scrollbar=1';
-    frame.style.width = '100%';
-    frame.style.height = '100%';
-    frame.style.border = 'none';
-    frame.oncontextmenu = ()=> false; // best-effort: blocks right-click "Save As" on the viewer
-    wrap.appendChild(frame);
+    wrap.style.padding = '10px';
+    wrap.style.boxSizing = 'border-box';
+    wrap.oncontextmenu = ()=> false; // best-effort: blocks right-click "Save Image As" on rendered pages
+    const loadingMsg = document.createElement('div');
+    loadingMsg.textContent = 'Loading…';
+    loadingMsg.style.cssText = 'color:#555;text-align:center;padding:40px;font-size:14px;';
+    wrap.appendChild(loadingMsg);
     lbContent.appendChild(wrap);
     lbHint.style.display = 'none';
+
+    // renders each page onto a plain <canvas> using PDF.js — this is a real, view-only
+    // rendering (no native browser PDF toolbar / download or print button can appear,
+    // since the browser never sees this as an embedded PDF object).
+    if (window['pdfjsLib']){
+      pdfjsLib.getDocument(it.file).promise.then(pdf=>{
+        wrap.innerHTML = '';
+        const renderPage = (num)=>{
+          pdf.getPage(num).then(page=>{
+            const scale = Math.min(2, (wrap.clientWidth - 20) / page.getViewport({scale:1}).width);
+            const viewport = page.getViewport({scale});
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.display = 'block';
+            canvas.style.margin = '0 auto 10px';
+            canvas.style.maxWidth = '100%';
+            canvas.oncontextmenu = ()=> false;
+            wrap.appendChild(canvas);
+            page.render({canvasContext: canvas.getContext('2d'), viewport});
+          });
+        };
+        for(let n=1; n<=pdf.numPages; n++) renderPage(n);
+      }).catch(()=>{
+        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#a11a1a;font-size:14px;">PDF load nahi ho paayi.</div>';
+      });
+    } else {
+      wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#a11a1a;font-size:14px;">Viewer load nahi ho paaya.</div>';
+    }
   }
   lbCaption.textContent = it.title;
   const multi = currentItems.length > 1;
