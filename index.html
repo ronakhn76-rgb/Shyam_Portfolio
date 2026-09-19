@@ -36,8 +36,8 @@
   @media (max-width:900px){.cursorGlow{display:none;}}
   @media (prefers-reduced-motion: reduce){.ambientGlow span{animation:none;}}
 
-  .reveal{opacity:0; transform:translateY(28px) scale(0.98); transition:opacity .8s cubic-bezier(.16,.84,.44,1), transform .8s cubic-bezier(.16,.84,.44,1);}
-  .reveal.show{opacity:1; transform:none;}
+  .reveal{opacity:0; transform:translateY(38px) scale(0.94); filter:blur(8px); transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1), filter .9s cubic-bezier(.16,1,.3,1);}
+  .reveal.show{opacity:1; transform:none; filter:blur(0);}
 
   header{
     position:fixed; top:0; left:0; right:0; z-index:100;
@@ -1549,9 +1549,15 @@ document.addEventListener('keydown', function(e){
       <div id="adminOutput">
         <div class="hint">
           Yeh naya item abhi is page par (aapke is browser/device par) dikh raha hai.
-          Isko <b>sabke liye hamesha ke liye live</b> karne ke liye: neeche di gayi file(s)
-          ko download karke apne repo ke <code>images</code>/<code>assets</code> folder mein daalein,
-          aur neeche ka code copy karke <code>index.html</code> ki <code>ITEMS</code> list mein paste karein, phir GitHub par push karein.
+          Isko <b>sabke liye hamesha ke liye live</b> karne ke liye: neeche ka code copy karke
+          <code>index.html</code> ki <code>ITEMS</code> list mein paste karein, phir GitHub par push karein.
+          <br><br>
+          <b>Image ya thumbnail ke liye koi file upload/rename karne ki zaroorat nahi</b> — woh
+          seedhi code ke andar hi embed hai, isliye broken image ka chance nahi rahega.
+          Agar type <b>Video</b> hai, toh neeche di gayi video file ko download karke apne repo ke
+          <code>assets/videos</code> folder mein <b>exact usi naam se</b> daalna hoga (jo code mein <code>src</code> field mein likha hai).
+          Agar type <b>PDF</b> hai, toh PDF file ko download karke <code>assets/catalogs</code> folder mein
+          <b>exact usi naam se</b> daalna hoga (jo code mein <code>file</code> field mein likha hai).
         </div>
         <label>Code to paste</label>
         <textarea id="adminCodeOut" readonly></textarea>
@@ -1729,34 +1735,34 @@ document.addEventListener('keydown', function(e){
     let item = null;
     let codeStr = '';
 
+    const MAX_EMBED_BYTES = 3 * 1024 * 1024; // 3MB safety cap for base64-embedded images/thumbs
+
     try{
       if (type === 'image'){
         const f = document.getElementById('upImageFile').files[0];
         if (!f){ throw new Error('Image file chunein.'); }
-        const ext = f.name.split('.').pop();
-        const fname = 'images/' + slug(title) + '-' + Date.now() + '.' + ext;
-        item = {type:'image', cat, title, src: fname};
-        downloadFile(f, fname.split('/')[1]);
+        if (f.size > MAX_EMBED_BYTES){ throw new Error('Image bahut badi hai (3MB se kam rakhein) taaki woh sahi se embed ho sake.'); }
+        const dataUrl = await fileToDataURL(f);
+        item = {type:'image', cat, title, src: dataUrl};
       } else if (type === 'video'){
         const vf = document.getElementById('upVideoFile').files[0];
         const pf = document.getElementById('upVideoPoster').files[0];
         if (!vf || !pf){ throw new Error('Video aur poster dono chunein.'); }
+        if (pf.size > MAX_EMBED_BYTES){ throw new Error('Poster image bahut badi hai (3MB se kam rakhein).'); }
         const vext = vf.name.split('.').pop();
-        const pext = pf.name.split('.').pop();
         const vname = 'assets/videos/' + slug(title) + '-' + Date.now() + '.' + vext;
-        const pname = 'images/' + slug(title) + '-poster-' + Date.now() + '.' + pext;
-        item = {type:'video', cat, title, src: vname, poster: pname};
+        const posterDataUrl = await fileToDataURL(pf);
+        item = {type:'video', cat, title, src: vname, poster: posterDataUrl};
         downloadFile(vf, vname.split('/').pop());
-        downloadFile(pf, pname.split('/').pop());
       } else if (type === 'pdf'){
         const df = document.getElementById('upPdfFile').files[0];
         const tf = document.getElementById('upPdfThumb').files[0];
         if (!df || !tf){ throw new Error('PDF aur thumbnail dono chunein.'); }
+        if (tf.size > MAX_EMBED_BYTES){ throw new Error('Thumbnail image bahut badi hai (3MB se kam rakhein).'); }
         const dname = 'assets/catalogs/' + slug(title) + '-' + Date.now() + '.pdf';
-        const tname = 'images/' + slug(title) + '-thumb-' + Date.now() + '.' + tf.name.split('.').pop();
-        item = {type:'pdf', cat, title, thumb: tname, file: dname};
+        const thumbDataUrl = await fileToDataURL(tf);
+        item = {type:'pdf', cat, title, thumb: thumbDataUrl, file: dname};
         downloadFile(df, dname.split('/').pop());
-        downloadFile(tf, tname.split('/').pop());
       }
     }catch(err){
       msg2.className='err'; msg2.textContent = err.message;
@@ -1775,7 +1781,7 @@ document.addEventListener('keydown', function(e){
     codeStr = JSON.stringify(item);
     document.getElementById('adminCodeOut').value = codeStr + ',';
     document.getElementById('adminOutput').style.display = 'block';
-    msg2.className='ok'; msg2.textContent='Add ho gaya! Neeche di gayi files aur code se ise permanently publish karein.';
+    msg2.className='ok'; msg2.textContent='Add ho gaya! Neeche ka code copy karke ITEMS list mein paste karein (image/thumbnail wale type mein koi file download nahi hui — sab kuch code ke andar hi hai).';
   });
 
   // Restore any locally-added items on page load (this device only)
